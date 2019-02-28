@@ -20,8 +20,6 @@ pip install -r requirements.txt
 ```
 
 ## User Guide
-Must have `before/` and `after/` directory in input dataset directory.
-
 ```
 python src/train.py "./data/testset/" "True"
 ```
