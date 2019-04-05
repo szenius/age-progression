@@ -20,8 +20,12 @@ pip install -r requirements.txt
 ```
 
 ## User Guide
-Must have `before/` and `after/` directory in input dataset directory.
+```
+python src/train.py <dataset_path> <load_saved> <num_epoch> <neg_ratio>
 
+# eg: python src/train.py "./data/" "True" 1000, 3
 ```
-python src/train.py "./data/testset/" "True"
-```
+* `dataset_path`: the path to a directory with the raw image files. Must contain empty `before/` and `after/` directories.
+* `load_saved`: True if you want to load extracted images from `<dataset_path>/before` and `<dataset_path>/after` directories instead of extracting them again. Otherwise False.
+* `num_epoch`: number of training epochs.
+* `neg_ratio`: N where 1:N is the ratio of positive to negative training examples.
