@@ -1,6 +1,8 @@
 # data and results
 data/*
 results/*
+*.h5
+*.png
 
 # Editors
 .vscode/*
