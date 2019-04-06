@@ -13,39 +13,35 @@ import sys
 plt.set_cmap('gray')
 
 def load_data(dir_path, load_saved, neg_eg_ratio):
-    x, y = get_images(dir_path, load_saved)
-    print("Loaded {} images from \"{}\".".format(x.shape[0], dir_path))
-    num_eval = int(x.shape[0] * 0.3)
-    x_eval, y_eval = x[-num_eval:], y[-num_eval:]
-    x, y = x[:-num_eval], y[:-num_eval]
-    neg_x, neg_y = generate_negative_egs(x, y, neg_eg_ratio=neg_eg_ratio)
-    return x, y, neg_x, neg_y, x_eval, y_eval
+    before, after = get_images(dir_path, load_saved)
+    print("Loaded {} pairs of images from \"{}\".".format(before.shape[0], dir_path))
+    neg_before, neg_after = generate_negative_egs(before, after, neg_eg_ratio=neg_eg_ratio)
+    return before, after, neg_before, neg_after
 
 def predict(model, x_eval, y_eval):
     pred = model.predict(x_eval)
     for i in range(len(x_eval)):
         plot_images(x_eval[i][:,:,0], pred[i][:,:,0], y_eval[i][:,:,0], file_name="pred_" + str(i))
 
-def train(pos_x, pos_y, neg_x, neg_y, x_eval, y_eval, num_epoch, model='cnn'):
-    if model == 'cnn':
-        x = np.vstack([pos_x, neg_x])
-        y = np.vstack([pos_y, neg_y])
-        model = get_cnn_model()
-        optimizer = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-        model.compile(loss='mean_squared_error', optimizer=optimizer)
-        history = model.fit(x=x, y=y, epochs=num_epoch, verbose=1, validation_data=(x_eval, y_eval), shuffle=True)
-        plot_loss(history.history['loss'], history.history['val_loss'], "loss.png")
-        predict(model, x_eval, y_eval)
-        save_model(model, 'model.h5')
-    else:
-        pass # todo: stub
+def train(x1, x2, y, num_epoch):
+    model = get_cnn_model()
+    optimizer = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='mean_squared_error', optimizer=optimizer)
+    history = model.fit(x=[x1, x2], y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True)
+    plot_loss(history.history['loss'], history.history['val_loss'], "loss.png")
+    predict(model, x_eval, y_eval)
+    save_model(model, 'model.h5')
 
 def save_model(model, filename):
     model.save(filename)
 
 def run(dir_path, load_saved, num_epoch, neg_eg_ratio):
-    pos_x, pos_y, neg_x, neg_y, x_eval, y_eval = load_data(dir_path, load_saved, neg_eg_ratio)
-    train(pos_x, pos_y, neg_x, neg_y, x_eval, y_eval, num_epoch)
+    pos_x1, pos_x2, neg_x1, neg_x2 = load_data(dir_path, load_saved, neg_eg_ratio)
+    pos_y, neg_y = np.ones(pos_x1.shape), np.zeros(neg_x1.shape)
+    x1 = np.vstack([pos_x1, neg_x1])
+    x2 = np.vstack([pos_x2, neg_x2])
+    y = np.vstack([pos_y, neg_y])
+    train(x1, x2, y, num_epoch)
 
 if __name__ == '__main__':
     run(sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]))
