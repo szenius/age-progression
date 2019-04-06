@@ -16,8 +16,8 @@ def plot_loss(loss, val_loss, filename):
 
 def plot_accuracy(acc, val_acc, filename):
     fig = plt.figure(301)
-    plt.plot(loss, label='train acc')
-    plt.plot(val_loss, label='val acc')
+    plt.plot(acc, label='train acc')
+    plt.plot(val_acc, label='val acc')
     plt.xlabel("epoch")
     plt.ylabel("acc")
     plt.title("Train vs Validation Accurary")
