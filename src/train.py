@@ -20,8 +20,8 @@ def load_data(dir_path, load_saved, neg_eg_ratio):
 
 def train(x1, x2, y, num_epoch):
     model = siamese_net()
-    optimizer = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(loss='mean_squared_error', optimizer=optimizer, metric=['accuracy'])
+    model.summary()
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     history = model.fit(x=[x1, x2], y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True)
     plot_loss(history.history['loss'], history.history['val_loss'], "loss.png")
     save_model(model, 'model.h5')
@@ -31,10 +31,10 @@ def save_model(model, filename):
 
 def run(dir_path, load_saved, num_epoch, neg_eg_ratio):
     pos_x1, pos_x2, neg_x1, neg_x2 = load_data(dir_path, load_saved, neg_eg_ratio)
-    pos_y, neg_y = np.ones(pos_x1.shape), np.zeros(neg_x1.shape)
+    pos_y, neg_y = np.ones(pos_x1.shape[0]), np.zeros(neg_x1.shape[0])
     x1 = np.vstack([pos_x1, neg_x1])
     x2 = np.vstack([pos_x2, neg_x2])
-    y = np.vstack([pos_y, neg_y])
+    y = np.hstack([pos_y, neg_y])
     train(x1, x2, y, num_epoch)
 
 if __name__ == '__main__':

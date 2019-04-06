@@ -15,7 +15,7 @@ import random
 
 
 def get_images(dir_path, load_saved=False):
-    if load_saved is True:
+    if load_saved:
         return load_batch("{}/{}/".format(dir_path, "before")), load_batch("{}/{}/".format(dir_path, "after"))
     else:
         return extract_faces(dir_path)
@@ -28,6 +28,7 @@ def load_batch(dir_path):
             image = Image.open(file_path)
             image = process_image(image)
             images.append(image)
+            print("Loaded {} from {}".format(file_path, dir_path))
     return np.array(images)
 
 def extract_faces(dir_path):

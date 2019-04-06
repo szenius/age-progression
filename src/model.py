@@ -1,37 +1,35 @@
 from keras.models import Model
-from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPool2D, Flatten, Dense, Reshape, BatchNormalization, ReLU, concatenate
+from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPool2D, Flatten, Dense, Reshape, BatchNormalization, ReLU, Lambda, K
 from plot_helper import image_shape
     
 def siamese_net(shape=(image_shape()[0],image_shape()[1],1)):
-    img_x1 = Input(shape=shape)
-    img_x2 = Input(shape=shape)
-    img_x1_features = feature_gen_cnn()(img_x1)
-    img_x2_features = feature_gen_cnn()(img_x2)
-    combined = concatenate([img_x1_features, img_x2_features])
-    combined = Dense(16, activation='linear')(combined)
-    combined = BatchNormalization()(combined)
-    combined = ReLU()(combined)
-    combined = Dense(4, activation='linear')(combined)
-    combined = BatchNormalization()(combined)
-    combined = ReLU()(combined)
-    combined = Dense(1, activation='sigmoid')(combined)
-    return Model(inputs=[img_x1, img_x2], outputs=combined)
+    left_input = Input(shape=shape)
+    right_input = Input(shape=shape)
 
-def feature_gen_cnn(shape=(image_shape()[0],image_shape()[1],1)):
-    img = Input(shape=shape)
-    t = Conv2D(16, 3, activation='linear')(img)
-    t = BatchNormalization()(t)
-    t = ReLU()(t)
-    t = Conv2D(32, 3, activation='linear')(t)
-    t = BatchNormalization()(t)
-    t = ReLU()(t)
-    t = MaxPool2D(strides=2)(t)
-    t = Flatten()(t)
-    t = Dense(32, activation='linear')(t)
-    t = BatchNormalization()(t)
-    t = ReLU()(t)
-    return Model(inputs=img, outputs=t)
+    # Image Encoding Model
+    encoding_input = Input(shape=shape)
+    encoding_output = Conv2D(16, 3, activation='linear')(encoding_input)
+    encoding_output = BatchNormalization()(encoding_output)
+    encoding_output = ReLU()(encoding_output)
+    encoding_output = Conv2D(32, 3, activation='linear')(encoding_output)
+    encoding_output = BatchNormalization()(encoding_output)
+    encoding_output = ReLU()(encoding_output)
+    encoding_output = MaxPool2D(strides=2)(encoding_output)
+    encoding_output = Flatten()(encoding_output)
+    encoding_output = Dense(8, activation='linear')(encoding_output)
+    encoding_output = BatchNormalization()(encoding_output)
+    encoding_output = ReLU()(encoding_output)
+    encoding_model = Model(inputs=encoding_input, outputs=encoding_output)
 
-def get_mlp_model():
-    pass
+    # Encode input images
+    left_encoding = encoding_model(left_input)
+    right_encoding= encoding_model(right_input)
 
+    # Comput absolute difference between encodings
+    DifferenceLayer = Lambda(lambda tensors:K.abs(tensors[0] - tensors[1]))
+    distance = DifferenceLayer([left_encoding, right_encoding])
+
+    # Add layer to compute similarity score
+    siamese_output = Dense(1, activation='sigmoid')(distance)
+
+    return Model(inputs=[left_input, right_input], outputs=siamese_output)
