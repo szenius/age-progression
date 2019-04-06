@@ -4,13 +4,6 @@ from matplotlib import pyplot as plt
 def image_shape():
     return (150,150)
 
-def plot_images(original, predicted, actual, file_name="result"):
-    f, axarr = plt.subplots(1,3)
-    axarr[0].imshow(original)
-    axarr[1].imshow(predicted)
-    axarr[2].imshow(actual)
-    plt.savefig("{}.png".format(file_name))
-
 def plot_loss(loss, val_loss, filename):
     fig = plt.figure(300)
     plt.plot(loss, label='train loss')
@@ -18,6 +11,16 @@ def plot_loss(loss, val_loss, filename):
     plt.xlabel("epoch")
     plt.ylabel("loss")
     plt.title("Train vs Validation Loss")
+    plt.legend()
+    plt.savefig(filename)
+
+def plot_accuracy(acc, val_acc, filename):
+    fig = plt.figure(301)
+    plt.plot(loss, label='train acc')
+    plt.plot(val_loss, label='val acc')
+    plt.xlabel("epoch")
+    plt.ylabel("acc")
+    plt.title("Train vs Validation Accurary")
     plt.legend()
     plt.savefig(filename)
 

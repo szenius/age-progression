@@ -6,7 +6,7 @@ from PIL import Image
 from skimage import io
 from os import listdir
 from os.path import isfile, join
-from plot_helper import plot_images, image_shape
+from plot_helper import image_shape
 import dlib
 import matplotlib.pyplot as plt
 import numpy as np
