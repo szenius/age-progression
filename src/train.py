@@ -21,7 +21,7 @@ def load_data(dir_path, load_saved, neg_eg_ratio):
 def train(x1, x2, y, num_epoch):
     model = siamese_net()
     optimizer = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(loss='mean_squared_error', optimizer=optimizer)
+    model.compile(loss='mean_squared_error', optimizer=optimizer, metric=['accuracy'])
     history = model.fit(x=[x1, x2], y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True)
     plot_loss(history.history['loss'], history.history['val_loss'], "loss.png")
     save_model(model, 'model.h5')
