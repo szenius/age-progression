@@ -18,18 +18,12 @@ def load_data(dir_path, load_saved, neg_eg_ratio):
     neg_before, neg_after = generate_negative_egs(before, after, neg_eg_ratio=neg_eg_ratio)
     return before, after, neg_before, neg_after
 
-def predict(model, x_eval, y_eval):
-    pred = model.predict(x_eval)
-    for i in range(len(x_eval)):
-        plot_images(x_eval[i][:,:,0], pred[i][:,:,0], y_eval[i][:,:,0], file_name="pred_" + str(i))
-
 def train(x1, x2, y, num_epoch):
-    model = get_cnn_model()
+    model = siamese_net()
     optimizer = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(loss='mean_squared_error', optimizer=optimizer)
     history = model.fit(x=[x1, x2], y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True)
     plot_loss(history.history['loss'], history.history['val_loss'], "loss.png")
-    predict(model, x_eval, y_eval)
     save_model(model, 'model.h5')
 
 def save_model(model, filename):
