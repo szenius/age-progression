@@ -23,26 +23,29 @@ def unison_shuffled_copies(a, b):
     p = np.random.permutation(a.shape[1])
     return [a[0][p], a[1][p]], b[p]
 
-def train(x1, x2, y, num_epoch):
-    model = siamese_net()
+def train(x1, x2, y, num_epoch, batch_size, model_type='diff'):
+    if model_type is 'diff':
+        model = siamese_net()
+    else:
+        model = siamese_net_concat()
     model.summary()
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     x, y = unison_shuffled_copies(np.array([x1, x2]), y)
-    history = model.fit(x=x, y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True)
+    history = model.fit(x=x, y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True, batch_size=batch_size)
     plot_loss(history.history['loss'], history.history['val_loss'], "loss.png")
     plot_accuracy(history.history['acc'], history.history['val_acc'], "acc.png")
-    save_model(model, 'model.h5')
+    save_model(model, 'model_{}_epoch{}_batch{}.h5'.format(model_type, num_epoch, batch_size))
 
 def save_model(model, filename):
     model.save(filename)
 
-def run(dir_path, load_saved, num_epoch, neg_eg_ratio):
+def run(dir_path, load_saved, num_epoch, neg_eg_ratio, batch_size, model_type):
     pos_x1, pos_x2, neg_x1, neg_x2 = load_data(dir_path, load_saved, neg_eg_ratio)
     pos_y, neg_y = np.ones(pos_x1.shape[0]), np.zeros(neg_x1.shape[0])
     x1 = np.vstack([pos_x1, neg_x1])
     x2 = np.vstack([pos_x2, neg_x2])
     y = np.hstack([pos_y, neg_y])
-    train(x1, x2, y, num_epoch)
+    train(x1, x2, y, num_epoch, batch_size, model_type=model_type)
 
 if __name__ == '__main__':
-    run(sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]))
+    run(sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]), sys.argv[6])
