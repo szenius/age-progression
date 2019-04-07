@@ -15,7 +15,7 @@ import random
 
 
 def get_images(dir_path, load_saved=False):
-    if load_saved:
+    if load_saved is True:
         return load_batch("{}/{}/".format(dir_path, "before")), load_batch("{}/{}/".format(dir_path, "after"))
     else:
         return extract_faces(dir_path)
@@ -37,7 +37,7 @@ def extract_faces(dir_path):
     for i, image in enumerate(images):
         detected_faces = detect_faces(image)
         if len(detected_faces) != 2: 
-            # Don't consider cases where we cannot extract exactly two photos
+            # Don't consider cases where we cannot extract exactly two faces
             continue 
         detected_faces.sort(key=lambda tup: tup[0])
         before_img, after_img = generate_image(detected_faces[0], image), generate_image(detected_faces[1], image)
@@ -89,6 +89,7 @@ def read_images(dir_path):
         file_path = join(dir_path, f)
         if isfile(file_path) and file_path.endswith(".png") or file_path.endswith(".jpg"):
             images.append(io.imread(file_path))
+            print("Read image {} from {}".format(file_path, dir_path))
     return images
 
 def save_images(dir_path, image_name, before_img, after_img):

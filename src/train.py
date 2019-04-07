@@ -32,8 +32,8 @@ def train(x1, x2, y, num_epoch, batch_size, model_type='diff'):
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     x, y = unison_shuffled_copies(np.array([x1, x2]), y)
     history = model.fit(x=x, y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True, batch_size=batch_size)
-    plot_loss(history.history['loss'], history.history['val_loss'], "loss.png")
-    plot_accuracy(history.history['acc'], history.history['val_acc'], "acc.png")
+    plot_loss(history.history['loss'], history.history['val_loss'], "loss_{}_epoch{}_batch{}.png".format(model_type, num_epoch, batch_size))
+    plot_accuracy(history.history['acc'], history.history['val_acc'], "acc_{}_epoch{}_batch{}.png".format(model_type, num_epoch, batch_size))
     save_model(model, 'model_{}_epoch{}_batch{}.h5'.format(model_type, num_epoch, batch_size))
 
 def save_model(model, filename):
@@ -48,4 +48,4 @@ def run(dir_path, load_saved, num_epoch, neg_eg_ratio, batch_size, model_type):
     train(x1, x2, y, num_epoch, batch_size, model_type=model_type)
 
 if __name__ == '__main__':
-    run(sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]), sys.argv[6])
+    run(sys.argv[1], bool(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]), sys.argv[6])
