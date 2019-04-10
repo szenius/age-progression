@@ -12,6 +12,8 @@ import sys
 from keras import backend as K
 from time import time
 
+K.tensorflow_backend._get_available_gpus()
+
 plt.set_cmap('gray')
 
 def sensitivity(y_true, y_pred):

@@ -19,19 +19,19 @@ def siamese_net(shape=(image_shape()[0],image_shape()[1],1)):
     distance = DifferenceLayer([left_encoding, right_encoding])
 
     # 1st Dense Layer
-    siamese_output = Dense(128)(distance)
+    siamese_output = Dense(16)(distance)
     siamese_output = ReLU()(siamese_output)
     siamese_output = Dropout(0.4)(siamese_output)
     siamese_output = BatchNormalization()(siamese_output)
 
     # 2nd Dense Layer
-    siamese_output = Dense(128)(siamese_output)
+    siamese_output = Dense(16)(siamese_output)
     siamese_output = ReLU()(siamese_output)
     siamese_output = Dropout(0.4)(siamese_output)
     siamese_output = BatchNormalization()(siamese_output)
 
     # 3rd Dense Layer
-    siamese_output = Dense(20)(siamese_output)
+    siamese_output = Dense(4)(siamese_output)
     siamese_output = ReLU()(siamese_output)
     siamese_output = Dropout(0.4)(siamese_output)
     siamese_output = BatchNormalization()(siamese_output)

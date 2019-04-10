@@ -16,7 +16,7 @@ import random
 
 def get_images(dir_path, load_saved=False):
     if load_saved is True:
-        before, after = load_batch("{}/{}/".format(dir_path, "before")), load_batch("{}/{}/".format(dir_path, "after"))
+        before, after = load_batch("{}/{}/".format(dir_path, "before"), "{}/{}/".format(dir_path, "after"))
     else:
         before, after = extract_faces(dir_path)
     before = add_augmented_images(before)
@@ -89,16 +89,22 @@ def add_noise_img(image):
                     image[i][j][k] += noise[i][j][k]
     return image
 
-def load_batch(dir_path):
-    images = []
-    for f in listdir(dir_path):
-        file_path = join(dir_path, f)
+def load_batch(dir_path_before, dir_path_after):
+    before, after = [], []
+    for f in listdir(dir_path_before):
+        file_path = join(dir_path_before, f)
         if isfile(file_path) and file_path.endswith(".png"):
-            image = Image.open(file_path)
-            image = process_image(image)
-            images.append(image)
-            print("Loaded {} from {}".format(file_path, dir_path))
-    return images
+            # Before
+            before_img = Image.open(file_path)
+            before_img = process_image(before_img)
+            before.append(before_img)
+            # After
+            file_path = join(dir_path_after, f)
+            after_img = Image.open(file_path)
+            after_img = process_image(after_img)
+            after.append(after_img)
+            print("Loaded {}".format(f))
+    return before, after
 
 def extract_faces(dir_path):
     images = read_images(dir_path)
