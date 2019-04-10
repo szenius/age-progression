@@ -47,5 +47,8 @@ def run(dir_path, load_saved, num_epoch, neg_eg_ratio, batch_size, model_type):
     y = np.hstack([pos_y, neg_y])
     train(x1, x2, y, num_epoch, batch_size, model_type=model_type)
 
+def get_boolean_val(input):
+    return input.lower() == "true"
+
 if __name__ == '__main__':
-    run(sys.argv[1], bool(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]), sys.argv[6])
+    run(sys.argv[1], get_boolean_val(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]), sys.argv[6])
