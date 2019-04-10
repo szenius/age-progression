@@ -5,24 +5,25 @@ def image_shape():
     return (150,150)
 
 def plot_loss(loss, val_loss, filename):
-    fig = plt.figure(300)
-    plt.plot(loss, label='train loss')
-    plt.plot(val_loss, label='val loss')
-    plt.xlabel("epoch")
-    plt.ylabel("loss")
-    plt.title("Train vs Validation Loss")
-    plt.legend()
-    plt.savefig(filename)
+    plot_graph(loss, val_loss, "loss", "Loss", filename)
 
 def plot_accuracy(acc, val_acc, filename):
-    fig = plt.figure(301)
-    plt.plot(acc, label='train acc')
-    plt.plot(val_acc, label='val acc')
+    plot_graph(acc, val_acc, "acc", "Accuracy", filename)
+
+def plot_specificity(spec, val_spec, filename):
+    plot_graph(spec, val_spec, "spec", "Specificity", filename)
+
+def plot_sensitivity(sen, val_sen, filename):
+    plot_graph(sen, val_sen, "sen", "Sensitivity", filename)
+
+def plot_graph(train_metric, val_metric, key_short, key_long, filename):
+    plt.plot(train_metric, label='train {}'.format(key_short))
+    plt.plot(val_metric, label='val {}'.format(key_short))
     plt.xlabel("epoch")
-    plt.ylabel("acc")
-    plt.title("Train vs Validation Accurary")
+    plt.ylabel(key_short)
+    plt.title("Train vs Validation {}".format(key_long))
     plt.legend()
     plt.savefig(filename)
-
+    
 def save_image(path, arr):
     plt.imsave(path, arr)

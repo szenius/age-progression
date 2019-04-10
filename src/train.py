@@ -1,7 +1,7 @@
 from detect_face import get_images, generate_negative_egs
 from model import *
 from plot_helper import *
-from keras import optimizers, losses, Model
+from keras import optimizers, losses, Model, callbacks
 from tensorflow import set_random_seed
 from matplotlib import pyplot as plt
 from PIL import Image
@@ -9,8 +9,19 @@ import matplotlib.cm as mplcm
 import matplotlib.colors as colors
 import numpy as np
 import sys
+from keras import backend as K
 
 plt.set_cmap('gray')
+
+def sensitivity(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    return true_positives / (possible_positives + K.epsilon())
+
+def specificity(y_true, y_pred):
+    true_negatives = K.sum(K.round(K.clip((1-y_true) * (1-y_pred), 0, 1)))
+    possible_negatives = K.sum(K.round(K.clip(1-y_true, 0, 1)))
+    return true_negatives / (possible_negatives + K.epsilon())
 
 def load_data(dir_path, load_saved, neg_eg_ratio):
     before, after = get_images(dir_path, load_saved)
@@ -19,21 +30,27 @@ def load_data(dir_path, load_saved, neg_eg_ratio):
     return before, after, neg_before, neg_after
 
 def unison_shuffled_copies(a, b):
-    assert a.shape[1] == b.shape[0]
+    img1 = a[0]
+    img2 = a[1]
+    assert img1.shape[0] == img2.shape[0] == b.shape[0]
     p = np.random.permutation(a.shape[1])
-    return [a[0][p], a[1][p]], b[p]
+    return [img1[p], img2[p]], b[p]
 
 def train(x1, x2, y, num_epoch, batch_size, model_type='diff'):
-    if model_type is 'diff':
+    if model_type.lower() == 'diff':
         model = siamese_net()
     else:
         model = siamese_net_concat()
     model.summary()
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    sgd = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy', sensitivity, specificity])
     x, y = unison_shuffled_copies(np.array([x1, x2]), y)
-    history = model.fit(x=x, y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True, batch_size=batch_size)
+    callback = callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=0, verbose=0, mode='auto', baseline=None, restore_best_weights=False)
+    history = model.fit(x=x, y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True, batch_size=batch_size, callbacks=callback)
     plot_loss(history.history['loss'], history.history['val_loss'], "loss_{}_epoch{}_batch{}.png".format(model_type, num_epoch, batch_size))
     plot_accuracy(history.history['acc'], history.history['val_acc'], "acc_{}_epoch{}_batch{}.png".format(model_type, num_epoch, batch_size))
+    plot_accuracy(history.history['specificity'], history.history['val_specificity'], "spec_{}_epoch{}_batch{}.png".format(model_type, num_epoch, batch_size))
+    plot_accuracy(history.history['sensitivity'], history.history['val_sensitivity'], "sen_{}_epoch{}_batch{}.png".format(model_type, num_epoch, batch_size))
     save_model(model, 'model_{}_epoch{}_batch{}.h5'.format(model_type, num_epoch, batch_size))
 
 def save_model(model, filename):

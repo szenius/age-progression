@@ -16,10 +16,79 @@ import random
 
 def get_images(dir_path, load_saved=False):
     if load_saved is True:
-        return load_batch("{}/{}/".format(dir_path, "before")), load_batch("{}/{}/".format(dir_path, "after"))
+        before, after = load_batch("{}/{}/".format(dir_path, "before")), load_batch("{}/{}/".format(dir_path, "after"))
     else:
-        return extract_faces(dir_path)
-    
+        before, after = extract_faces(dir_path)
+    before = add_augmented_images(before)
+    after = add_augmented_images(after)
+    return np.array(before), np.array(after)
+
+def add_augmented_images(images):
+    results = []
+    for i, image in enumerate(images):
+        results.append(image)
+        results.append(flip_img(image))
+        results.append(rotate_img(image, 90))
+        results.append(rotate_img(image, 180))
+        results.append(rotate_img(image, 270))
+        # results.append(translate_left_img(image))
+        # results.append(translate_right_img(image))
+        # results.append(translate_up_img(image))
+        # results.append(translate_down_img(image))
+        results.append(add_noise_img(image))
+        print("Applied augmentation to image {}/{}".format(i, len(images)))
+    return results
+
+def flip_img(image):
+    return np.fliplr(image)
+
+def rotate_img(image, degree):
+    num_rotations = int(degree / 90)
+    for i in range(num_rotations):
+        image = np.rot90(image)
+    return image
+
+def translate_left_img(image):
+    for i in range(image.shape[1], 1, -1):
+        for j in range(image.shape[0]):
+            if (i < image.shape[1]-20):
+                image[j][i] = image[j][i-20]
+            elif (i < image.shape[1]-1):
+                image[j][i] = 0
+    return image
+
+def translate_right_img(image):
+    for j in range(image.shape[0]):
+        for i in range(image.shape[1]):
+            if (i < image.shape[1]-20):
+                image[j][i] = image[j][i+20]
+    return image
+
+def translate_up_img(image):
+    for j in range(image.shape[0]):
+        for i in range(image.shape[1]):
+            if (j < image.shape[0] - 20 and j > 20):
+                image[j][i] = image[j+20][i]
+            else:
+                image[j][i] = 0
+    return image
+
+def translate_down_img(image):
+    for j in range(image.shape[0], 1, -1):
+        for i in range(image.shape[1]):
+            if (j < 144 and j > 20):
+                image[j][i] = image[j-20][i]
+    return image
+
+def add_noise_img(image):
+    noise = np.random.randint(5, size = image.shape, dtype = 'uint8')
+    for i in range(image.shape[0]):
+        for j in range(image.shape[1]):
+            for k in range(image.shape[2]):
+                if (image[i][j][k] != 255):
+                    image[i][j][k] += noise[i][j][k]
+    return image
+
 def load_batch(dir_path):
     images = []
     for f in listdir(dir_path):
@@ -29,7 +98,7 @@ def load_batch(dir_path):
             image = process_image(image)
             images.append(image)
             print("Loaded {} from {}".format(file_path, dir_path))
-    return np.array(images)
+    return images
 
 def extract_faces(dir_path):
     images = read_images(dir_path)
@@ -44,7 +113,7 @@ def extract_faces(dir_path):
         save_images(dir_path, str(i), before_img[:,:,0], after_img[:,:,0])
         before.append(before_img)
         after.append(after_img)
-    return np.array(before), np.array(after)
+    return before, after
 
 def generate_negative_egs(pos_x, pos_y, neg_eg_ratio=1):
     neg_x, neg_y = [], []
