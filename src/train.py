@@ -10,6 +10,7 @@ import matplotlib.colors as colors
 import numpy as np
 import sys
 from keras import backend as K
+from time import time
 
 plt.set_cmap('gray')
 
@@ -42,11 +43,12 @@ def train(x1, x2, y, num_epoch, batch_size, model_type='diff'):
     else:
         model = siamese_net_concat()
     model.summary()
-    sgd = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy', sensitivity, specificity])
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', sensitivity, specificity])
     x, y = unison_shuffled_copies(np.array([x1, x2]), y)
-    callback = callbacks.EarlyStopping(monitor='val_loss', min_delta=0, patience=0, verbose=0, mode='auto', baseline=None, restore_best_weights=False)
-    history = model.fit(x=x, y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True, batch_size=batch_size, callbacks=callback)
+    start_time = time()
+    history = model.fit(x=x, y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True, batch_size=batch_size, callbacks=[callbacks.EarlyStopping()])
+    end_time = time()
+    print("Took {} to train over {} epochs with batch size {}".format(end_time - start_time, num_epoch, batch_size))
     plot_loss(history.history['loss'], history.history['val_loss'], "loss_{}_epoch{}_batch{}.png".format(model_type, num_epoch, batch_size))
     plot_accuracy(history.history['acc'], history.history['val_acc'], "acc_{}_epoch{}_batch{}.png".format(model_type, num_epoch, batch_size))
     plot_accuracy(history.history['specificity'], history.history['val_specificity'], "spec_{}_epoch{}_batch{}.png".format(model_type, num_epoch, batch_size))

@@ -1,5 +1,5 @@
 from keras.models import Model
-from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPool2D, Flatten, LeakyReLU, Dropout
+from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPool2D, Flatten, LeakyReLU, Dropout, ReLU
 from keras.layers import Dense, Reshape, BatchNormalization, ReLU, Lambda, K, concatenate, regularizers
 from plot_helper import image_shape
     
@@ -18,7 +18,25 @@ def siamese_net(shape=(image_shape()[0],image_shape()[1],1)):
     DifferenceLayer = Lambda(lambda tensors:K.abs(tensors[0] - tensors[1]))
     distance = DifferenceLayer([left_encoding, right_encoding])
 
-    siamese_output = Dense(1, activation='sigmoid')(distance)
+    # 1st Dense Layer
+    siamese_output = Dense(128)(distance)
+    siamese_output = ReLU()(siamese_output)
+    siamese_output = Dropout(0.4)(siamese_output)
+    siamese_output = BatchNormalization()(siamese_output)
+
+    # 2nd Dense Layer
+    siamese_output = Dense(128)(siamese_output)
+    siamese_output = ReLU()(siamese_output)
+    siamese_output = Dropout(0.4)(siamese_output)
+    siamese_output = BatchNormalization()(siamese_output)
+
+    # 3rd Dense Layer
+    siamese_output = Dense(20)(siamese_output)
+    siamese_output = ReLU()(siamese_output)
+    siamese_output = Dropout(0.4)(siamese_output)
+    siamese_output = BatchNormalization()(siamese_output)
+
+    siamese_output = Dense(1, activation='sigmoid')(siamese_output)
 
     return Model(inputs=[left_input, right_input], outputs=siamese_output)
 
@@ -43,16 +61,36 @@ def siamese_net_concat(shape=(image_shape()[0],image_shape()[1],1)):
 
 def get_encoding_model(shape):
     encoding_input = Input(shape=shape)
-    encoding_output = Conv2D(8, 8, activation='linear')(encoding_input)
-    encoding_output = Dropout(0.5)(encoding_output)
-    encoding_output = LeakyReLU()(encoding_output)
-    encoding_output = MaxPool2D(strides=2)(encoding_output)
-    encoding_output = Flatten()(encoding_output)
-    encoding_output = Dense(8, activation='linear', kernel_regularizer=regularizers.l2(0.01), activity_regularizer=regularizers.l1(0.01))(encoding_output)
-    encoding_output = Dropout(0.5)(encoding_output)
-    encoding_output = LeakyReLU()(encoding_output)
-    return Model(inputs=encoding_input, outputs=encoding_output)
 
-# def cnn1(shape):
-#     input = Input(shape=shape)
-#     output = Conv2D()(input)
+    # 1st Convolutional Layer
+    encoding_output = Conv2D(filters=96, kernel_size=11, strides=4, padding='valid')(encoding_input)
+    encoding_output = ReLU()(encoding_output)
+    encoding_output = MaxPool2D(pool_size=2, strides=2, padding='valid')(encoding_output)
+    encoding_output = BatchNormalization()(encoding_output)
+
+    # 2nd Convolutional Layer
+    encoding_output = Conv2D(filters=256, kernel_size=11, strides=1, padding='valid')(encoding_input)
+    encoding_output = ReLU()(encoding_output)
+    encoding_output = MaxPool2D(pool_size=2, strides=2, padding='valid')(encoding_output)
+    encoding_output = BatchNormalization()(encoding_output)
+
+    # 3rd Convolutional Layer
+    encoding_output = Conv2D(filters=384, kernel_size=3, strides=1, padding='valid')(encoding_input)
+    encoding_output = ReLU()(encoding_output)
+    encoding_output = BatchNormalization()(encoding_output)
+
+    # 4th Convolutional Layer
+    encoding_output = Conv2D(filters=384, kernel_size=3, strides=1, padding='valid')(encoding_input)
+    encoding_output = ReLU()(encoding_output)
+    encoding_output = BatchNormalization()(encoding_output)
+
+    # 5th Convolutional Layer
+    encoding_output = Conv2D(filters=256, kernel_size=3, strides=1, padding='valid')(encoding_input)
+    encoding_output = ReLU()(encoding_output)
+    encoding_output = MaxPool2D(pool_size=2, strides=2, padding='valid')(encoding_output)
+    encoding_output = BatchNormalization()(encoding_output)
+
+    # Flatten
+    encoding_output = Flatten()(encoding_output)
+
+    return Model(inputs=encoding_input, outputs=encoding_output)
