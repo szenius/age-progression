@@ -20,8 +20,15 @@ def get_images(dir_path, load_saved=False):
     else:
         before, after = extract_faces(dir_path)
     before = add_augmented_images(before)
-    after = add_augmented_images(after)
+    after = duplicate_rows(after, int(len(before)/len(after)))
     return np.array(before), np.array(after)
+
+def duplicate_rows(images, num_dupes):
+    results = []
+    for image in images:
+        for i in range(num_dupes):
+            results.append(image)
+    return results
 
 def add_augmented_images(images):
     results = []

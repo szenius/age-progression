@@ -11,8 +11,7 @@ import numpy as np
 import sys
 from keras import backend as K
 from time import time
-
-K.tensorflow_backend._get_available_gpus()
+import keras_metrics
 
 plt.set_cmap('gray')
 
@@ -40,22 +39,43 @@ def unison_shuffled_copies(a, b):
     return [img1[p], img2[p]], b[p]
 
 def train(x1, x2, y, num_epoch, batch_size, model_type='diff'):
-    if model_type.lower() == 'diff':
-        model = siamese_net()
-    else:
-        model = siamese_net_concat()
+    # Get and compile model
+    model = siamese_net()
     model.summary()
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', sensitivity, specificity])
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', keras_metrics.precision(), keras_metrics.recall(), keras_metrics.f1_score()])
+    # Shuffle and split data
     x, y = unison_shuffled_copies(np.array([x1, x2]), y)
+    train_x, train_y, test_x, test_y = split_data(x, y)
+    # Train model
     start_time = time()
-    history = model.fit(x=x, y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True, batch_size=batch_size, callbacks=[callbacks.EarlyStopping()])
+    history = model.fit(x=x, y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True, batch_size=batch_size, callbacks=[callbacks.EarlyStopping(monitor='val loss', patience=2)])
     end_time = time()
-    print("Took {} to train over {} epochs with batch size {}".format(end_time - start_time, num_epoch, batch_size))
-    plot_loss(history.history['loss'], history.history['val_loss'], "loss_{}_epoch{}_batch{}.png".format(model_type, num_epoch, batch_size))
-    plot_accuracy(history.history['acc'], history.history['val_acc'], "acc_{}_epoch{}_batch{}.png".format(model_type, num_epoch, batch_size))
-    plot_accuracy(history.history['specificity'], history.history['val_specificity'], "spec_{}_epoch{}_batch{}.png".format(model_type, num_epoch, batch_size))
-    plot_accuracy(history.history['sensitivity'], history.history['val_sensitivity'], "sen_{}_epoch{}_batch{}.png".format(model_type, num_epoch, batch_size))
-    save_model(model, 'model_{}_epoch{}_batch{}.h5'.format(model_type, num_epoch, batch_size))
+    epochs_trained = len(history.history['loss'])
+    print("Took {} to train over {} epochs with batch size {}".format(end_time - start_time, epochs_trained, batch_size))
+    # Plot graphs
+    plot_graph(history.history['loss'], history.history['val_loss'], 'loss', 'Loss', "loss_epoch{}_batch{}.png".format(epochs_trained, batch_size))
+    plot_graph(history.history['acc'], history.history['val_acc'], 'accuracy', 'Accuracy', "acc_epoch{}_batch{}.png".format(epochs_trained, batch_size))
+    plot_graph(history.history['recall'], history.history['val_recall'], 'recall', 'Recall', "rec_epoch{}_batch{}.png".format(epochs_trained, batch_size))
+    plot_graph(history.history['precision'], history.history['val_precision'], 'precision', 'Precision', "pre_epoch{}_batch{}.png".format(epochs_trained, batch_size))
+    plot_graph(history.history['f1_score'], history.history['val_f1_score'], 'f1', 'F1 Score', "f1_epoch{}_batch{}.png".format(epochs_trained, batch_size))  
+    # Save model
+    save_model(model, 'model_epoch{}_batch{}.h5'.format(epochs_trained, batch_size))
+
+def split_data(x, y, split=0.8, filename='indices.txt'):
+    split_exists = os.path.isfile(filename)
+    if split_exists:
+        with open(filename) as f:
+            indices = [[int(x) for x in line.strip().split()] for line in f]
+    else:
+        k = len(y) * split
+        indices = random.sample(xrange(len(data)), k)
+        with open(filename, 'w') as f:
+            for item in indices:
+                f.write("%d " % item)
+    x0 = [x[0][i] for i in indices]
+    x1 = [x[1][i] for i in indices]
+    y = [y[i] for i in indices]
+    return [x0, x1], y
 
 def save_model(model, filename):
     model.save(filename)

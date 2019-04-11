@@ -12,10 +12,13 @@ grpcio==1.18.0
 h5py==2.9.0
 Keras==2.2.4
 Keras-Applications==1.0.7
+keras-metrics==1.1.0
 Keras-Preprocessing==1.0.9
 kiwisolver==1.0.1
 Markdown==3.0.1
 matplotlib==3.0.2
+mkl-fft==1.0.6
+mkl-random==1.0.1
 networkx==2.2
 numpy==1.16.1
 Pillow==5.4.1
