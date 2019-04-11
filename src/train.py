@@ -5,15 +5,18 @@ from keras import optimizers, losses, Model, callbacks
 from tensorflow import set_random_seed
 from matplotlib import pyplot as plt
 from PIL import Image
+from keras import backend as K
+from time import time
+import keras_metrics
+import os
+import random
 import matplotlib.cm as mplcm
 import matplotlib.colors as colors
 import numpy as np
 import sys
-from keras import backend as K
-from time import time
-import keras_metrics
 
 plt.set_cmap('gray')
+np.random.seed(0)
 
 def sensitivity(y_true, y_pred):
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
@@ -45,7 +48,6 @@ def train(x1, x2, y, num_epoch, batch_size, model_type='diff'):
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', keras_metrics.precision(), keras_metrics.recall(), keras_metrics.f1_score()])
     # Shuffle and split data
     x, y = unison_shuffled_copies(np.array([x1, x2]), y)
-    train_x, train_y, test_x, test_y = split_data(x, y)
     # Train model
     start_time = time()
     history = model.fit(x=x, y=y, epochs=num_epoch, verbose=1, validation_split=0.3, shuffle=True, batch_size=batch_size, callbacks=[callbacks.EarlyStopping(monitor='val loss', patience=2)])
@@ -60,22 +62,6 @@ def train(x1, x2, y, num_epoch, batch_size, model_type='diff'):
     plot_graph(history.history['f1_score'], history.history['val_f1_score'], 'f1', 'F1 Score', "f1_epoch{}_batch{}.png".format(epochs_trained, batch_size))  
     # Save model
     save_model(model, 'model_epoch{}_batch{}.h5'.format(epochs_trained, batch_size))
-
-def split_data(x, y, split=0.8, filename='indices.txt'):
-    split_exists = os.path.isfile(filename)
-    if split_exists:
-        with open(filename) as f:
-            indices = [[int(x) for x in line.strip().split()] for line in f]
-    else:
-        k = len(y) * split
-        indices = random.sample(xrange(len(data)), k)
-        with open(filename, 'w') as f:
-            for item in indices:
-                f.write("%d " % item)
-    x0 = [x[0][i] for i in indices]
-    x1 = [x[1][i] for i in indices]
-    y = [y[i] for i in indices]
-    return [x0, x1], y
 
 def save_model(model, filename):
     model.save(filename)
