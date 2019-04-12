@@ -59,6 +59,7 @@ def train_cnn(x1, x2, y, num_epoch, batch_size):
     start_time = time()
     history = model.fit(x=x_train, y=y_train, epochs=num_epoch, verbose=1, validation_data=(x_test, y_test), shuffle=True, batch_size=batch_size, callbacks=[callbacks.EarlyStopping(monitor='val_loss', patience=2)])
     end_time = time()
+    time_taken = end_time - start_time
     epochs_trained = len(history.history['loss'])
     print("Took {} to train over {} epochs with batch size {}".format(end_time - start_time, epochs_trained, batch_size))
     # Plot train vs test metric graphs
@@ -72,7 +73,7 @@ def train_cnn(x1, x2, y, num_epoch, batch_size):
     fpr, tpr, thresholds = roc_curve(y_test, y_pred)
     plot_roc(fpr, tpr, "roc_epoch{}_batch{}.png".format(epochs_trained, batch_size))
     # Save metrics
-    save_metrics(history, fpr, tpr, "metrics_epoch{}_batch{}.txt".format(epochs_trained, batch_size))
+    save_metrics(history, fpr, tpr, time_taken, epoch_trained, batch_size, "metrics_epoch{}_batch{}.txt".format(epochs_trained, batch_size))
     # Save model
     save_model(model, 'model_epoch{}_batch{}.h5'.format(epochs_trained, batch_size))
 
@@ -89,24 +90,26 @@ def train_mlp(x, y, num_epoch, batch_size):
     start_time = time()
     history = model.fit(x=x_train, y=y_train, epochs=num_epoch, verbose=1, validation_data=(x_test, y_test), shuffle=True, batch_size=batch_size, callbacks=[callbacks.EarlyStopping(monitor='val_loss', patience=5)])
     end_time = time()
-    print("Took {} to train over {} epochs and with batch size {}".format(end_time - start_time, num_epoch, batch_size))
+    epoch_trained = len(history.history['loss'])
+    print("Took {} to train over {} epochs and with batch size {}".format(end_time - start_time, epoch_trained, batch_size))
     # Plot graphs
-    plot_graph(history.history['loss'], history.history['val_loss'], 'loss', 'Loss', "loss_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 100)
-    plot_graph(history.history['acc'], history.history['val_acc'], 'accuracy', 'Accuracy', "acc_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 101)
-    plot_graph(history.history['recall'], history.history['val_recall'], 'recall', 'Recall', "rec_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 102)
-    plot_graph(history.history['precision'], history.history['val_precision'], 'precision', 'Precision', "pre_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 103)
-    plot_graph(history.history['f1_score'], history.history['val_f1_score'], 'f1', 'F1 Score', "f1_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 104)  
+    plot_graph(history.history['loss'], history.history['val_loss'], 'loss', 'Loss', "loss_epoch{}_batch{}_mlp.png".format(epoch_trained, batch_size), 100)
+    plot_graph(history.history['acc'], history.history['val_acc'], 'accuracy', 'Accuracy', "acc_epoch{}_batch{}_mlp.png".format(epoch_trained, batch_size), 101)
+    plot_graph(history.history['recall'], history.history['val_recall'], 'recall', 'Recall', "rec_epoch{}_batch{}_mlp.png".format(epoch_trained, batch_size), 102)
+    plot_graph(history.history['precision'], history.history['val_precision'], 'precision', 'Precision', "pre_epoch{}_batch{}_mlp.png".format(epoch_trained, batch_size), 103)
+    plot_graph(history.history['f1_score'], history.history['val_f1_score'], 'f1', 'F1 Score', "f1_epoch{}_batch{}_mlp.png".format(epoch_trained, batch_size), 104)  
     # Plot ROC curve
     y_pred = model.predict(x_test).ravel()
     fpr, tpr, thresholds = roc_curve(y_test, y_pred)
-    plot_roc(fpr, tpr, "roc_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size))
+    plot_roc(fpr, tpr, "roc_epoch{}_batch{}_mlp.png".format(epoch_trained, batch_size))
     # Save metrics
-    save_metrics(history, fpr, tpr, "metrics_epoch{}_batch{}_mlp.txt".format(num_epoch, batch_size))
+    save_metrics(history, fpr, tpr, "metrics_epoch{}_batch{}_mlp.txt".format(epoch_trained, batch_size))
     # Save model
-    save_model(model, 'model_epoch{}_batch{}_mlp.h5'.format(num_epoch, batch_size))
+    save_model(model, 'model_epoch{}_batch{}_mlp.h5'.format(epoch_trained, batch_size))
 
-def save_metrics(history, fpr, tpr, filename):
+def save_metrics(history, fpr, tpr, time_taken, epoch_trained, batch_size, filename):
     with open(filename, 'w') as f:
+        f.write("took {} seconds to train over {} batch size and {} epochs".format(time_taken, batch_size, epoch_trained))
         f.write("insample: acc {}, recall {}, precision {}, f1 {}".format(history.history['acc'][-1], history.history['recall'][-1], history.history['precision'][-1], history.history['f1_score'][-1]))
         f.write("\noutsample: acc {}, recall {}, precision {}, f1 {}".format(history.history['val_acc'][-1], history.history['val_recall'][-1], history.history['val_precision'][-1], history.history['val_f1_score'][-1]))
         f.write("\nfpr: ")
