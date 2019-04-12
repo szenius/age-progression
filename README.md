@@ -24,6 +24,7 @@ pip install -r requirements.txt
 python src/train.py <dataset_path> <load_saved> <num_epoch> <neg_ratio> <batch_size> <model_type>
 
 # eg: python src/train.py "./data/" "True" 1000 3 128 "diff"
+# eg: python src/train.py feature_data.csv True 100 1 32 mlp
 ```
 * `dataset_path`: the path to a directory with the raw image files. Must contain empty `before/` and `after/` directories.
 * `load_saved`: True if you want to load extracted images from `<dataset_path>/before` and `<dataset_path>/after` directories instead of extracting them again. Otherwise False.
