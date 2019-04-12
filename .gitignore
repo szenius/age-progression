@@ -3,6 +3,8 @@ data/*
 results/*
 *.h5
 *.png
+*results/*
+*data*
 
 # Editors
 .vscode/*

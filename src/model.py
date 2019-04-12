@@ -2,7 +2,17 @@ from keras.models import Model
 from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPool2D, Flatten, LeakyReLU, Dropout, ReLU
 from keras.layers import Dense, Reshape, BatchNormalization, ReLU, Lambda, K, concatenate, regularizers
 from plot_helper import image_shape
-    
+
+def mlp(shape=(24,)):
+    input = Input(shape=shape)
+    output = Dense(24, activation='relu')(input)
+    output = BatchNormalization()(output)
+    for i in range(9):
+        output = Dense(24, activation='relu')(output)
+        output = BatchNormalization()(output)
+    output = Dense(1, activation='sigmoid')(output)
+    return Model(inputs=input, outputs=output)
+
 def siamese_net(shape=(image_shape()[0],image_shape()[1],1)):
     left_input = Input(shape=shape)
     right_input = Input(shape=shape)
