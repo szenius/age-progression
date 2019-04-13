@@ -73,11 +73,12 @@ def train_cnn(x1, x2, y, num_epoch, batch_size):
     fpr, tpr, thresholds = roc_curve(y_test, y_pred)
     plot_roc(fpr, tpr, "roc_epoch{}_batch{}.png".format(epochs_trained, batch_size))
     # Save metrics
-    save_metrics(history, fpr, tpr, time_taken, epoch_trained, batch_size, "metrics_epoch{}_batch{}.txt".format(epochs_trained, batch_size))
+    save_metrics(history, fpr, tpr, time_taken, num_epoch, batch_size, "metrics_epoch{}_batch{}.txt".format(epochs_trained, batch_size))
     # Save model
     save_model(model, 'model_epoch{}_batch{}.h5'.format(epochs_trained, batch_size))
 
 def train_mlp(x, y, num_epoch, batch_size):
+    ### Cross Validation ###
     # Get and compile model
     model = mlp()
     model.summary()
@@ -86,32 +87,86 @@ def train_mlp(x, y, num_epoch, batch_size):
     # Shuffle data
     x, y = unison_shuffled_copies(x, y, dual_input=False)
     x_split, y_split = split_data(x, y, chunks=True)
-    print(np.array(x_split).shape, np.array(y_split).shape)
     # Train model
-    # start_time = time()
-    # history = model.fit(x=x_train, y=y_train, epochs=num_epoch, verbose=1, validation_data=(x_test, y_test), shuffle=True, batch_size=batch_size, callbacks=[callbacks.EarlyStopping(monitor='val_loss', patience=5)])
-    # end_time = time()
-    # epoch_trained = len(history.history['loss'])
-    # print("Took {} to train over {} epochs and with batch size {}".format(end_time - start_time, epoch_trained, batch_size))
-    # # Plot graphs
-    # plot_graph(history.history['loss'], history.history['val_loss'], 'loss', 'Loss', "loss_epoch{}_batch{}_mlp.png".format(epoch_trained, batch_size), 100)
-    # plot_graph(history.history['acc'], history.history['val_acc'], 'accuracy', 'Accuracy', "acc_epoch{}_batch{}_mlp.png".format(epoch_trained, batch_size), 101)
-    # plot_graph(history.history['recall'], history.history['val_recall'], 'recall', 'Recall', "rec_epoch{}_batch{}_mlp.png".format(epoch_trained, batch_size), 102)
-    # plot_graph(history.history['precision'], history.history['val_precision'], 'precision', 'Precision', "pre_epoch{}_batch{}_mlp.png".format(epoch_trained, batch_size), 103)
-    # plot_graph(history.history['f1_score'], history.history['val_f1_score'], 'f1', 'F1 Score', "f1_epoch{}_batch{}_mlp.png".format(epoch_trained, batch_size), 104)  
-    # # Plot ROC curve
-    # y_pred = model.predict(x_test).ravel()
-    # fpr, tpr, thresholds = roc_curve(y_test, y_pred)
-    # plot_roc(fpr, tpr, "roc_epoch{}_batch{}_mlp.png".format(epoch_trained, batch_size))
-    # # Save metrics
-    # save_metrics(history, fpr, tpr, "metrics_epoch{}_batch{}_mlp.txt".format(epoch_trained, batch_size))
-    # # Save model
-    # save_model(model, 'model_epoch{}_batch{}_mlp.h5'.format(epoch_trained, batch_size))
+    start_time = time()
+    history = []
+    for i in range(5): 
+        x_train, y_train = collect_train_data(x_split, y_split, i)
+        x_test, y_test = x_split[i], y_split[i]
+        history.append(model.fit(x=np.array(x_train), y=np.array(y_train), epochs=num_epoch, verbose=1, validation_data=(np.array(x_test), np.array(y_test)), shuffle=True, batch_size=batch_size).history)
+        model = mlp()
+        model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy', keras_metrics.precision(), keras_metrics.recall(), keras_metrics.f1_score()])
+    end_time = time()
+    time_taken = end_time - start_time
+    print("Took {} to train over {} epochs and with batch size {}".format(end_time - start_time, num_epoch, batch_size))
+    # Compute mean metrics
+    loss, val_loss = compute_mean_metric(history, 'loss', 'val_loss')
+    acc, val_acc = compute_mean_metric(history, 'acc', 'val_acc')
+    recall, val_recall = compute_mean_metric(history, 'recall', 'val_recall')
+    precision, val_precision = compute_mean_metric(history, 'precision', 'val_precision')
+    f1, val_f1 = compute_mean_metric(history, 'f1_score', 'val_f1_score')
+    # Plot graphs
+    plot_graph(loss, val_loss, 'loss', 'Loss', "loss_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 100)
+    plot_graph(acc, val_acc, 'accuracy', 'Accuracy', "acc_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 101)
+    plot_graph(recall, val_recall, 'recall', 'Recall', "rec_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 102)
+    plot_graph(precision, val_precision, 'precision', 'Precision', "pre_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 103)
+    plot_graph(f1, val_f1, 'f1', 'F1 Score', "f1_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 104)  
+    # Plot ROC curve
+    y_pred = model.predict(x_test).ravel()
+    fpr, tpr, thresholds = roc_curve(y_test, y_pred)
+    plot_roc(fpr, tpr, "roc_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size))
+    # Save metrics
+    save_metrics_ext(acc[-1], recall[-1], precision[-1], f1[-1], val_acc[-1], val_recall[-1], val_precision[-1], val_f1[-1], fpr, tpr, time_taken, num_epoch, batch_size, "metrics_epoch{}_batch{}_mlp.txt".format(num_epoch, batch_size))
+    ### Learning Curve ###
+    model = mlp()
+    model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy', keras_metrics.precision(), keras_metrics.recall(), keras_metrics.f1_score()])
+    lc_history = []
+    i = 1
+    size = int(len(x)/100*i)
+    while i < 101 and size < len(x):
+        print(size)
+        lc_history.append(model.fit(x=np.array(x[:size]), y=np.array(y[:size]), epochs=num_epoch, verbose=1, shuffle=True, batch_size=batch_size).history)
+        model = mlp()
+        model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy', keras_metrics.precision(), keras_metrics.recall(), keras_metrics.f1_score()])
+        i = i + 1
+        size = int(len(x)/100*i)
 
-def save_metrics(history, fpr, tpr, time_taken, epoch_trained, batch_size, filename):
+    plot_lc(lc_history, "lc_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 105)
+    # Save model
+    save_model(model, 'model_epoch{}_batch{}_mlp.h5'.format(num_epoch, batch_size))
+
+def compute_mean_metric(history, train_key, test_key):
+    train_data, test_data = [], []
+    for i in range(len(history)):
+        train_data.append(history[i][train_key])
+        test_data.append(history[i][test_key])
+    return np.mean(np.array(train_data), axis=0), np.mean(np.array(test_data), axis=0)
+
+def collect_train_data(x_split, y_split, exclude_index):
+    x_out = []
+    y_out = []
+    for i in range(len(x_split)):
+        if i != exclude_index:
+            x_out.extend(x_split[i])
+            y_out.extend(y_split[i])
+    return x_out, y_out
+
+def save_metrics_ext(acc, recall, precision, f1, val_acc, val_recall, val_precision, val_f1, fpr, tpr, time_taken, num_epoch, batch_size, filename):
     with open(filename, 'w') as f:
-        f.write("took {} seconds to train over {} batch size and {} epochs".format(time_taken, batch_size, epoch_trained))
-        f.write("insample: acc {}, recall {}, precision {}, f1 {}".format(history.history['acc'][-1], history.history['recall'][-1], history.history['precision'][-1], history.history['f1_score'][-1]))
+        f.write("took {} seconds to train over {} batch size and {} epochs".format(time_taken, batch_size, num_epoch))
+        f.write("\ninsample: acc {}, recall {}, precision {}, f1 {}".format(acc, recall, precision, f1))
+        f.write("\noutsample: acc {}, recall {}, precision {}, f1 {}".format(val_acc, val_recall, val_precision, val_f1))
+        f.write("\nfpr: ")
+        for item in fpr:
+            f.write("{} ".format(item))
+        f.write("\ntpr: ")
+        for item in tpr:
+            f.write("{} ".format(item))
+
+def save_metrics(history, fpr, tpr, time_taken, num_epoch, batch_size, filename):
+    with open(filename, 'w') as f:
+        f.write("took {} seconds to train over {} batch size and {} epochs".format(time_taken, batch_size, num_epoch))
+        f.write("\ninsample: acc {}, recall {}, precision {}, f1 {}".format(history.history['acc'][-1], history.history['recall'][-1], history.history['precision'][-1], history.history['f1_score'][-1]))
         f.write("\noutsample: acc {}, recall {}, precision {}, f1 {}".format(history.history['val_acc'][-1], history.history['val_recall'][-1], history.history['val_precision'][-1], history.history['val_f1_score'][-1]))
         f.write("\nfpr: ")
         for item in fpr:
@@ -135,7 +190,7 @@ def split_data(x, y, split=0.3, dual_input=False, chunks=False, k=5):
             y_out.append(y[i:i+chunk_size])
             i = i + chunk_size
         x_out.append(x[i:])
-        y_out.append(x[i:])
+        y_out.append(y[i:])
         return x_out, y_out
     else:
         return x[:num_train], x[num_train:], y[:num_train], y[num_train:]
