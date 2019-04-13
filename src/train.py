@@ -15,6 +15,8 @@ import matplotlib.colors as colors
 import numpy as np
 import sys
 from sklearn.metrics import roc_curve
+from keras.utils import plot_model
+import csv
 
 plt.set_cmap('gray')
 np.random.seed(0)
@@ -68,12 +70,8 @@ def train_cnn(x1, x2, y, num_epoch, batch_size):
     plot_graph(history.history['recall'], history.history['val_recall'], 'recall', 'Recall', "rec_epoch{}_batch{}.png".format(epochs_trained, batch_size), 202)
     plot_graph(history.history['precision'], history.history['val_precision'], 'precision', 'Precision', "pre_epoch{}_batch{}.png".format(epochs_trained, batch_size), 203)
     plot_graph(history.history['f1_score'], history.history['val_f1_score'], 'f1', 'F1 Score', "f1_epoch{}_batch{}.png".format(epochs_trained, batch_size), 204)  
-    # Plot ROC curve
-    y_pred = model.predict(x_test).ravel()
-    fpr, tpr, thresholds = roc_curve(y_test, y_pred)
-    plot_roc(fpr, tpr, "roc_epoch{}_batch{}.png".format(epochs_trained, batch_size))
     # Save metrics
-    save_metrics(history, fpr, tpr, time_taken, num_epoch, batch_size, "metrics_epoch{}_batch{}.txt".format(epochs_trained, batch_size))
+    save_metrics(history, time_taken, num_epoch, batch_size, "metrics_epoch{}_batch{}.txt".format(epochs_trained, batch_size))
     # Save model
     save_model(model, 'model_epoch{}_batch{}.h5'.format(epochs_trained, batch_size))
 
@@ -100,23 +98,19 @@ def train_mlp(x, y, num_epoch, batch_size):
     time_taken = end_time - start_time
     print("Took {} to train over {} epochs and with batch size {}".format(end_time - start_time, num_epoch, batch_size))
     # Compute mean metrics
-    loss, val_loss = compute_mean_metric(history, 'loss', 'val_loss')
-    acc, val_acc = compute_mean_metric(history, 'acc', 'val_acc')
-    recall, val_recall = compute_mean_metric(history, 'recall', 'val_recall')
-    precision, val_precision = compute_mean_metric(history, 'precision', 'val_precision')
-    f1, val_f1 = compute_mean_metric(history, 'f1_score', 'val_f1_score')
+    loss_mean, val_loss_mean, loss_stdev, val_loss_stdev = compute_desc_stats(history, 'loss', 'val_loss')
+    acc_mean, val_acc_mean, acc_stdev, val_acc_stdev = compute_desc_stats(history, 'acc', 'val_acc')
+    recall_mean, val_recall_mean, recall_stdev, val_recall_stdev = compute_desc_stats(history, 'recall', 'val_recall')
+    precision_mean, val_precision_mean, precision_stdev, val_precision_stdev = compute_desc_stats(history, 'precision', 'val_precision')
+    f1_mean, val_f1_mean, f1_stdev, val_f1_stdev = compute_desc_stats(history, 'f1_score', 'val_f1_score')
     # Plot graphs
-    plot_graph(loss, val_loss, 'loss', 'Loss', "loss_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 100)
-    plot_graph(acc, val_acc, 'accuracy', 'Accuracy', "acc_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 101)
-    plot_graph(recall, val_recall, 'recall', 'Recall', "rec_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 102)
-    plot_graph(precision, val_precision, 'precision', 'Precision', "pre_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 103)
-    plot_graph(f1, val_f1, 'f1', 'F1 Score', "f1_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 104)  
-    # Plot ROC curve
-    y_pred = model.predict(x_test).ravel()
-    fpr, tpr, thresholds = roc_curve(y_test, y_pred)
-    plot_roc(fpr, tpr, "roc_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size))
+    plot_graph(loss_mean, val_loss_mean, 'loss', 'Loss', "loss_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 100)
+    plot_graph(acc_mean, val_acc_mean, 'accuracy', 'Accuracy', "acc_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 101)
+    plot_graph(recall_mean, val_recall_mean, 'recall', 'Recall', "rec_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 102)
+    plot_graph(precision_mean, val_precision_mean, 'precision', 'Precision', "pre_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 103)
+    plot_graph(f1_mean, val_f1_mean, 'f1', 'F1 Score', "f1_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 104)  
     # Save metrics
-    save_metrics_ext(acc[-1], recall[-1], precision[-1], f1[-1], val_acc[-1], val_recall[-1], val_precision[-1], val_f1[-1], fpr, tpr, time_taken, num_epoch, batch_size, "metrics_epoch{}_batch{}_mlp.txt".format(num_epoch, batch_size))
+    save_metrics_ext(acc_mean[-1], recall_mean[-1], precision_mean[-1], f1_mean[-1], val_acc_mean[-1], val_recall_mean[-1], val_precision_mean[-1], val_f1_mean[-1], acc_stdev[-1], recall_stdev[-1], precision_stdev[-1], f1_stdev[-1], val_acc_stdev[-1], val_recall_stdev[-1], val_precision_stdev[-1], val_f1_stdev[-1], time_taken, num_epoch, batch_size, "metrics_epoch{}_batch{}_mlp.txt".format(num_epoch, batch_size))
     ### Learning Curve ###
     model = mlp()
     model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy', keras_metrics.precision(), keras_metrics.recall(), keras_metrics.f1_score()])
@@ -124,23 +118,35 @@ def train_mlp(x, y, num_epoch, batch_size):
     i = 1
     size = int(len(x)/100*i)
     while i < 101 and size < len(x):
-        print(size)
         lc_history.append(model.fit(x=np.array(x[:size]), y=np.array(y[:size]), epochs=num_epoch, verbose=1, shuffle=True, batch_size=batch_size).history)
         model = mlp()
         model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy', keras_metrics.precision(), keras_metrics.recall(), keras_metrics.f1_score()])
         i = i + 1
         size = int(len(x)/100*i)
-
-    plot_lc(lc_history, "lc_epoch{}_batch{}_mlp.png".format(num_epoch, batch_size), 105)
+    save_lc(lc_history, "lc_epoch{}_batch{}_mlp.csv".format(num_epoch, batch_size))
     # Save model
     save_model(model, 'model_epoch{}_batch{}_mlp.h5'.format(num_epoch, batch_size))
 
-def compute_mean_metric(history, train_key, test_key):
+def save_lc(history, filename):
+    acc = collect_last_metric(history, 'acc')
+    f1 = collect_last_metric(history, 'f1_score')
+    with open('lc.csv', 'a') as f:
+        writer = csv.writer(f)
+        writer.writerow(acc)
+        writer.writerow(f1)
+
+def collect_last_metric(maps, key):
+    out = []
+    for map in maps:
+        out.append(map[key][-1])
+    return out
+
+def compute_desc_stats(history, train_key, test_key):
     train_data, test_data = [], []
     for i in range(len(history)):
         train_data.append(history[i][train_key])
         test_data.append(history[i][test_key])
-    return np.mean(np.array(train_data), axis=0), np.mean(np.array(test_data), axis=0)
+    return np.mean(np.array(train_data), axis=0), np.mean(np.array(test_data), axis=0), np.std(np.array(train_data), axis=0), np.std(np.array(test_data), axis=0)
 
 def collect_train_data(x_split, y_split, exclude_index):
     x_out = []
@@ -151,29 +157,19 @@ def collect_train_data(x_split, y_split, exclude_index):
             y_out.extend(y_split[i])
     return x_out, y_out
 
-def save_metrics_ext(acc, recall, precision, f1, val_acc, val_recall, val_precision, val_f1, fpr, tpr, time_taken, num_epoch, batch_size, filename):
+def save_metrics_ext(acc_mean, recall_mean, precision_mean, f1_mean, val_acc_mean, val_recall_mean, val_precision_mean, val_f1_mean, acc_stdev, recall_stdev, precision_stdev, f1_stdev, val_acc_stdev, val_recall_stdev, val_precision_stdev, val_f1_stdev, time_taken, num_epoch, batch_size, filename):
     with open(filename, 'w') as f:
         f.write("took {} seconds to train over {} batch size and {} epochs".format(time_taken, batch_size, num_epoch))
-        f.write("\ninsample: acc {}, recall {}, precision {}, f1 {}".format(acc, recall, precision, f1))
-        f.write("\noutsample: acc {}, recall {}, precision {}, f1 {}".format(val_acc, val_recall, val_precision, val_f1))
-        f.write("\nfpr: ")
-        for item in fpr:
-            f.write("{} ".format(item))
-        f.write("\ntpr: ")
-        for item in tpr:
-            f.write("{} ".format(item))
+        f.write("\ninsample mean: acc {}, recall {}, precision {}, f1 {}".format(acc_mean, recall_mean, precision_mean, f1_mean))
+        f.write("\noutsample mean: acc {}, recall {}, precision {}, f1 {}".format(val_acc_mean, val_recall_mean, val_precision_mean, val_f1_mean))
+        f.write("\ninsample stdev: acc {}, recall {}, precision {}, f1 {}".format(acc_stdev, recall_stdev, precision_stdev, f1_stdev))
+        f.write("\noutsample stdev: acc {}, recall {}, precision {}, f1 {}".format(val_acc_stdev, val_recall_stdev, val_precision_stdev, val_f1_stdev))
 
-def save_metrics(history, fpr, tpr, time_taken, num_epoch, batch_size, filename):
+def save_metrics(history, time_taken, num_epoch, batch_size, filename):
     with open(filename, 'w') as f:
         f.write("took {} seconds to train over {} batch size and {} epochs".format(time_taken, batch_size, num_epoch))
         f.write("\ninsample: acc {}, recall {}, precision {}, f1 {}".format(history.history['acc'][-1], history.history['recall'][-1], history.history['precision'][-1], history.history['f1_score'][-1]))
         f.write("\noutsample: acc {}, recall {}, precision {}, f1 {}".format(history.history['val_acc'][-1], history.history['val_recall'][-1], history.history['val_precision'][-1], history.history['val_f1_score'][-1]))
-        f.write("\nfpr: ")
-        for item in fpr:
-            f.write("{} ".format(item))
-        f.write("\ntpr: ")
-        for item in tpr:
-            f.write("{} ".format(item))
 
 def split_data(x, y, split=0.3, dual_input=False, chunks=False, k=5):
     num_test = int(len(y) * split)

@@ -32,12 +32,6 @@ def plot_lc(history, filename, id):
     plt.xlabel('% Test Instances')
     plt.ylabel('Metric')
     plt.savefig(filename)
-
-def collect_last_metric(maps, key):
-    out = []
-    for map in maps:
-        out.append(map[key][-1])
-    return out
     
 def save_image(path, arr):
     plt.imsave(path, arr)
