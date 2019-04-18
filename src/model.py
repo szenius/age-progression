@@ -19,6 +19,7 @@ def siamese_net(shape=(image_shape()[0],image_shape()[1],1)):
 
     # Image Encoding Model
     encoding_model = get_encoding_model(shape)
+    encoding_model.summary()
 
     # Encode input images
     left_encoding = encoding_model(left_input)
@@ -79,25 +80,14 @@ def get_encoding_model(shape):
     encoding_output = BatchNormalization()(encoding_output)
 
     # 2nd Convolutional Layer
-    encoding_output = Conv2D(filters=256, kernel_size=11, strides=1, padding='valid')(encoding_input)
+    encoding_output = Conv2D(filters=256, kernel_size=11, strides=1, padding='valid')(encoding_output)
     encoding_output = ReLU()(encoding_output)
     encoding_output = MaxPool2D(pool_size=2, strides=2, padding='valid')(encoding_output)
     encoding_output = BatchNormalization()(encoding_output)
 
     # 3rd Convolutional Layer
-    encoding_output = Conv2D(filters=384, kernel_size=3, strides=1, padding='valid')(encoding_input)
+    encoding_output = Conv2D(filters=384, kernel_size=3, strides=1, padding='valid')(encoding_output)
     encoding_output = ReLU()(encoding_output)
-    encoding_output = BatchNormalization()(encoding_output)
-
-    # 4th Convolutional Layer
-    encoding_output = Conv2D(filters=384, kernel_size=3, strides=1, padding='valid')(encoding_input)
-    encoding_output = ReLU()(encoding_output)
-    encoding_output = BatchNormalization()(encoding_output)
-
-    # 5th Convolutional Layer
-    encoding_output = Conv2D(filters=256, kernel_size=3, strides=1, padding='valid')(encoding_input)
-    encoding_output = ReLU()(encoding_output)
-    encoding_output = MaxPool2D(pool_size=2, strides=2, padding='valid')(encoding_output)
     encoding_output = BatchNormalization()(encoding_output)
 
     # Flatten

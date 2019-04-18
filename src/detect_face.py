@@ -38,10 +38,6 @@ def add_augmented_images(images):
         results.append(rotate_img(image, 90))
         results.append(rotate_img(image, 180))
         results.append(rotate_img(image, 270))
-        # results.append(translate_left_img(image))
-        # results.append(translate_right_img(image))
-        # results.append(translate_up_img(image))
-        # results.append(translate_down_img(image))
         results.append(add_noise_img(image))
         print("Applied augmentation to image {}/{}".format(i, len(images)))
     return results

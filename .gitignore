@@ -5,6 +5,7 @@ results/*
 *.png
 *results/*
 *data*
+*.html
 
 # Editors
 .vscode/*
