@@ -1,6 +1,11 @@
 # data and results
-results/*
 data/*
+results/*
+*.h5
+*.png
+*results/*
+*data*
+*.html
 
 # Editors
 .vscode/*

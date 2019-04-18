@@ -4,22 +4,34 @@ from matplotlib import pyplot as plt
 def image_shape():
     return (150,150)
 
-def plot_images(original, predicted, actual, file_name="result"):
-    f, axarr = plt.subplots(1,3)
-    axarr[0].imshow(original)
-    axarr[1].imshow(predicted)
-    axarr[2].imshow(actual)
-    plt.savefig("{}.png".format(file_name))
-
-def plot_loss(loss, val_loss, filename):
-    fig = plt.figure(300)
-    plt.plot(loss, label='train loss')
-    plt.plot(val_loss, label='val loss')
+def plot_graph(train_metric, val_metric, key_short, key_long, filename, id):
+    plt.figure(id)
+    plt.plot(train_metric, label='train {}'.format(key_short))
+    plt.plot(val_metric, label='val {}'.format(key_short))
     plt.xlabel("epoch")
-    plt.ylabel("loss")
-    plt.title("Train vs Validation Loss")
+    plt.ylabel(key_short)
+    plt.title("Train vs Validation {}".format(key_long))
     plt.legend()
     plt.savefig(filename)
 
+def plot_roc(fpr, tpr, filename, id=1):
+    plt.figure(id)
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.plot(fpr, tpr)
+    plt.xlabel('False positive rate')
+    plt.ylabel('True positive rate')
+    plt.title('ROC curve')
+    plt.savefig(filename)        
+
+def plot_lc(history, filename, id):
+    plt.figure(id)
+    plt.plot(collect_last_metric(history, 'acc'), label='acc')
+    plt.plot(collect_last_metric(history, 'recall'), label='recall')
+    plt.plot(collect_last_metric(history, 'precision'), label='precision')
+    plt.plot(collect_last_metric(history, 'f1_score'), label='f1_score')
+    plt.xlabel('% Test Instances')
+    plt.ylabel('Metric')
+    plt.savefig(filename)
+    
 def save_image(path, arr):
     plt.imsave(path, arr)

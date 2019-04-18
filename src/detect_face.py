@@ -6,7 +6,7 @@ from PIL import Image
 from skimage import io
 from os import listdir
 from os.path import isfile, join
-from plot_helper import plot_images, image_shape
+from plot_helper import image_shape
 import dlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,19 +16,98 @@ import random
 
 def get_images(dir_path, load_saved=False):
     if load_saved is True:
-        return load_batch("{}/{}/".format(dir_path, "before")), load_batch("{}/{}/".format(dir_path, "after"))
+        before, after = load_batch("{}/{}/".format(dir_path, "before"), "{}/{}/".format(dir_path, "after"))
     else:
-        return extract_faces(dir_path)
-    
-def load_batch(dir_path):
-    images = []
-    for f in listdir(dir_path):
-        file_path = join(dir_path, f)
+        before, after = extract_faces(dir_path)
+    before = add_augmented_images(before)
+    after = duplicate_rows(after, int(len(before)/len(after)))
+    return np.array(before), np.array(after)
+
+def duplicate_rows(images, num_dupes):
+    results = []
+    for image in images:
+        for i in range(num_dupes):
+            results.append(image)
+    return results
+
+def add_augmented_images(images):
+    results = []
+    for i, image in enumerate(images):
+        results.append(image)
+        results.append(flip_img(image))
+        results.append(rotate_img(image, 90))
+        results.append(rotate_img(image, 180))
+        results.append(rotate_img(image, 270))
+        results.append(add_noise_img(image))
+        print("Applied augmentation to image {}/{}".format(i, len(images)))
+    return results
+
+def flip_img(image):
+    return np.fliplr(image)
+
+def rotate_img(image, degree):
+    num_rotations = int(degree / 90)
+    for i in range(num_rotations):
+        image = np.rot90(image)
+    return image
+
+def translate_left_img(image):
+    for i in range(image.shape[1], 1, -1):
+        for j in range(image.shape[0]):
+            if (i < image.shape[1]-20):
+                image[j][i] = image[j][i-20]
+            elif (i < image.shape[1]-1):
+                image[j][i] = 0
+    return image
+
+def translate_right_img(image):
+    for j in range(image.shape[0]):
+        for i in range(image.shape[1]):
+            if (i < image.shape[1]-20):
+                image[j][i] = image[j][i+20]
+    return image
+
+def translate_up_img(image):
+    for j in range(image.shape[0]):
+        for i in range(image.shape[1]):
+            if (j < image.shape[0] - 20 and j > 20):
+                image[j][i] = image[j+20][i]
+            else:
+                image[j][i] = 0
+    return image
+
+def translate_down_img(image):
+    for j in range(image.shape[0], 1, -1):
+        for i in range(image.shape[1]):
+            if (j < 144 and j > 20):
+                image[j][i] = image[j-20][i]
+    return image
+
+def add_noise_img(image):
+    noise = np.random.randint(5, size = image.shape, dtype = 'uint8')
+    for i in range(image.shape[0]):
+        for j in range(image.shape[1]):
+            for k in range(image.shape[2]):
+                if (image[i][j][k] != 255):
+                    image[i][j][k] += noise[i][j][k]
+    return image
+
+def load_batch(dir_path_before, dir_path_after):
+    before, after = [], []
+    for f in listdir(dir_path_before):
+        file_path = join(dir_path_before, f)
         if isfile(file_path) and file_path.endswith(".png"):
-            image = Image.open(file_path)
-            image = process_image(image)
-            images.append(image)
-    return np.array(images)
+            # Before
+            before_img = Image.open(file_path)
+            before_img = process_image(before_img)
+            before.append(before_img)
+            # After
+            file_path = join(dir_path_after, f)
+            after_img = Image.open(file_path)
+            after_img = process_image(after_img)
+            after.append(after_img)
+            print("Loaded {}".format(f))
+    return before, after
 
 def extract_faces(dir_path):
     images = read_images(dir_path)
@@ -36,14 +115,14 @@ def extract_faces(dir_path):
     for i, image in enumerate(images):
         detected_faces = detect_faces(image)
         if len(detected_faces) != 2: 
-            # Don't consider cases where we cannot extract exactly two photos
+            # Don't consider cases where we cannot extract exactly two faces
             continue 
         detected_faces.sort(key=lambda tup: tup[0])
         before_img, after_img = generate_image(detected_faces[0], image), generate_image(detected_faces[1], image)
         save_images(dir_path, str(i), before_img[:,:,0], after_img[:,:,0])
         before.append(before_img)
         after.append(after_img)
-    return np.array(before), np.array(after)
+    return before, after
 
 def generate_negative_egs(pos_x, pos_y, neg_eg_ratio=1):
     neg_x, neg_y = [], []
@@ -88,6 +167,7 @@ def read_images(dir_path):
         file_path = join(dir_path, f)
         if isfile(file_path) and file_path.endswith(".png") or file_path.endswith(".jpg"):
             images.append(io.imread(file_path))
+            print("Read image {} from {}".format(file_path, dir_path))
     return images
 
 def save_images(dir_path, image_name, before_img, after_img):
